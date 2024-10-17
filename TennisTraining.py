@@ -9,13 +9,13 @@ def argparser():
     parser = argparse.ArgumentParser(description="Parse arguments for DDPG agent training on Tennis application")
     parser.add_argument("--training_episodes", type=int, nargs='?', default=3000, help="number of episodes to train agent")
     parser.add_argument("--max_iterations", type=int, nargs='?', default=700, help="maximum number of iterations to run each episode")
-    parser.add_argument("--buffer_size", type=int, nargs='?', default=int(1e6), help="replay buffer size")
+    parser.add_argument("--buffer_size", type=int, nargs='?', default=int(1e5), help="replay buffer size")
     parser.add_argument("--batch_size", type=int, nargs='?', default=128, help="minibatch size")
     parser.add_argument("--gamma", type=float, nargs='?', default=0.99, help="discount factor")
     parser.add_argument("--tau", type=float, nargs='?', default=1e-3, help="for soft update of target parameters")
     parser.add_argument("--actor_lr", type=float, nargs='?', default=1e-4, help="actor learning rate")
     parser.add_argument("--critic_lr", type=float, nargs='?', default=3e-4, help="critic learning rate")
-    parser.add_argument("--weight_decay", type=float, nargs='?', default=0.0001, help="L2 weight decay")
+    parser.add_argument("--weight_decay", type=float, nargs='?', default=0.0, help="L2 weight decay")
     args = parser.parse_args()
     return args
 
