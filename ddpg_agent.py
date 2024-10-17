@@ -50,7 +50,7 @@ class Agent():
         self.critic_optimizer = optim.Adam(self.critic_local.parameters(), lr=args.critic_lr, weight_decay=args.weight_decay)
 
         # Noise process
-        self.noise = OUNoise(action_size, random_seed)
+        self.noise = OUNoise(self.num_agents, self.action_size, random_seed)
 
         # Replay memory
         self.memory = ReplayBuffer(action_size, args.buffer_size, args.batch_size, random_seed)
@@ -137,9 +137,10 @@ class Agent():
 class OUNoise:
     """Ornstein-Uhlenbeck process."""
 
-    def __init__(self, size, seed, mu=0., theta=0.15, sigma=0.2):
+    def __init__(self, num_agents, action_size, seed, mu=0., theta=0.15, sigma=0.2):
         """Initialize parameters and noise process."""
-        self.mu = mu * np.ones(size)
+        self.size = (num_agents, action_size)
+        self.mu = mu * np.ones(self.size)
         self.theta = theta
         self.sigma = sigma
         self.seed = random.seed(seed)
@@ -153,6 +154,7 @@ class OUNoise:
         """Update internal state and return it as a noise sample."""
         x = self.state
         dx = self.theta * (self.mu - x) + self.sigma * np.array([random.random() for i in range(len(x))])
+        dx = self.theta * (self.mu - x) + self.sigma * np.random.standard_normal(self.size)
         self.state = x + dx
         return self.state
 

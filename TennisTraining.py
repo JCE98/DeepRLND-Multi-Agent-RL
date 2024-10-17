@@ -1,4 +1,4 @@
-import torch, argparse, warnings, time
+import torch, argparse, warnings, time, os
 import numpy as np
 import matplotlib.pyplot as plt
 from unityagents import UnityEnvironment
@@ -7,7 +7,7 @@ from collections import deque
 
 def argparser():
     parser = argparse.ArgumentParser(description="Parse arguments for DDPG agent training on Tennis application")
-    parser.add_argument("--training_episodes", type=int, nargs='?', default=2000, help="number of episodes to train agent")
+    parser.add_argument("--training_episodes", type=int, nargs='?', default=3000, help="number of episodes to train agent")
     parser.add_argument("--max_iterations", type=int, nargs='?', default=700, help="maximum number of iterations to run each episode")
     parser.add_argument("--buffer_size", type=int, nargs='?', default=int(1e6), help="replay buffer size")
     parser.add_argument("--batch_size", type=int, nargs='?', default=128, help="minibatch size")
@@ -45,18 +45,19 @@ def ddpg(env, args):
             next_states = env_info.vector_observations
             rewards = env_info.rewards
             dones = env_info.local_done
+            score += rewards
             agent.step(states, actions, rewards, next_states, dones)
             states = next_states
-            score += rewards
             if np.any(dones):
                 break 
-        scores_deque.append(score)
-        scores.append(score)
-        print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, np.mean(scores_deque)), end="")
+        max_score = np.max(score)
+        scores_deque.append(max_score)
+        scores = np.append(scores,max_score)
+        print('Episode {}\tAverage Score: {:.2f}\tEpisode Time: {:.2f}'.format(i_episode, np.mean(scores_deque), (time.time()-start)), end="\r")
         if i_episode % 100 == 0:
             torch.save(agent.actor_local.state_dict(), 'checkpoint_actor.pth')
             torch.save(agent.critic_local.state_dict(), 'checkpoint_critic.pth')
-            print('Episode {}\tAverage Score: {:.2f}\tTime: {:.2f}'.format(i_episode, np.mean(scores_deque), (time.time()-start)), end="\r")
+            print('\nAverage Score of Last 100 episodes: {:.2f}'.format(np.mean(scores_deque)))
         if len(scores_deque) == 100 and np.mean(scores_deque) >= 0.5:
             print('\nEnvironment solved in {:d} episodes.'.format(i_episode))
             torch.save(agent.actor_local.state_dict(), 'solution_actor.pth')
@@ -65,6 +66,51 @@ def ddpg(env, args):
         if (i_episode==args.training_episodes):
             print('\nMax training episodes reached without environment solution!')
     return scores
+
+def test_agent(env, episodes=100):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")             # tensor casting device
+    tensor_kwargs = {'device':device, 'dtype':torch.float32, 'requires_grad':True}      # keyword arguments for tensor instatntiation
+    brain_name = env.brain_names[0]
+    brain = env.brains[brain_name]
+    env_info = env.reset(train_mode=False)[brain_name]
+    num_agents = len(env_info.agents)
+    state_size = env_info.vector_observations.shape[1]
+    action_size = brain.vector_action_space_size
+    scores_array = np.array([])                                                         # container to capture mean scores from each episode for plotting
+    agent = Agent(state_size, action_size, num_agents, args, random_seed=10)            # instantiate agent object
+    # Load agent solution
+    agent.actor_local.load_state_dict(torch.load('solution_actor.pth'))
+    agent.critic_local.load_state_dict(torch.load('solution_critic.pth'))
+
+    scores = []
+
+    for i_episode in range(1, episodes+1):
+        env_info = env.reset(train_mode=False)[brain_name]     # reset the environment    
+        states = env_info.vector_observations                  # get the current state (for each agent)
+        agent.reset()
+        score = np.zeros(num_agents)                          # initialize the score (for each agent)
+
+        while True:
+            actions = agent.act(states)                        # select an action (for each agent)
+            env_info = env.step(actions)[brain_name]           # send all actions to the environment
+            next_states = env_info.vector_observations         # get next state (for each agent)
+            rewards = env_info.rewards                         # get reward (for each agent)
+            dones = env_info.local_done                        # see if episode finished
+            score += rewards                                   # update the score (for each agent)
+            states = next_states                               # roll over states to next time step
+            if any(dones):
+                break
+
+        mean_score = np.mean(score)
+        scores_array = np.append(scores_array,mean_score)
+        # Print out Score for each testing episode
+        print('\rEpisode {}\tAverage Score: {:.2f}'.format(i_episode, mean_score))
+
+    # Compute the overall mean score from testing and print out resutls
+    overall_mean = np.mean(scores)
+    print('\nAverage Score {:.2f} Episodes: {:.2f}'.format(overall_mean, i_episode))
+            
+    return scores_array
 
 if __name__=="__main__":
     warnings.simplefilter('ignore', UserWarning)                                    # prevents torch.nn.functional.tanh deprecation warning
@@ -77,15 +123,29 @@ if __name__=="__main__":
     env = UnityEnvironment(file_name=path)
     # train agent
     print('Entering training loop...')
-    scores = ddpg(env, args)
-    print("Closing Unity environment...")
-    env.close()
+    train_scores = ddpg(env, args)
     print('Training Complete!')
-
+    # plot training results
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    plt.plot(np.arange(1, len(scores)+1), scores)
+    plt.plot(np.arange(1, len(train_scores)+1), train_scores)
     plt.ylabel('Score')
     plt.xlabel('Episode #')
-    plt.savefig('avg_score.png')
+    plt.savefig('avg_train_score.png')
     plt.show()
+    # test trained agent
+    if os.path.exists("./solution_actor.pth"):                                      # check whether solution has been found
+        # test trained agent
+        print('Testing trained agent...')
+        test_scores = test_agent(env)
+        print('Testing complete!')
+        # plot testing results
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        plt.plot(np.arange(1, len(test_scores)+1), test_scores)                     # plot average scores per episode
+        plt.ylabel('Score')
+        plt.xlabel('Episode #')
+        plt.savefig('avg_test_score.png')
+        plt.show()
+    print("Closing Unity environment...")
+    env.close()
