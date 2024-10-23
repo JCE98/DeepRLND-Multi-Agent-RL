@@ -37,9 +37,68 @@ The environment is considered solved, when the average (over 100 episodes) of th
 
 2. Place the file in the DRLND GitHub repository, in the `p3_collab-compet/` folder, and unzip (or decompress) the file. 
 
+### Dependencies
+To set up your python environment to run the code in this repository, follow the instructions below.
+
+Create (and activate) a new environment with Python 3.6.
+
+Linux or Mac:
+```
+conda create --name drlnd python=3.6
+source activate drlnd
+```
+Windows:
+```
+conda create --name drlnd python=3.6 
+activate drlnd
+```
+If running in Windows, ensure you have the "Build Tools for Visual Studio 2019" installed from this site. This article may also be very helpful. This was confirmed to work in Windows 10 Home.
+
+Clone the repository (if you haven't already!), and navigate to the python/ folder. Then, install several dependencies.
+
+```
+git clone https://github.com/udacity/deep-reinforcement-learning.git
+cd deep-reinforcement-learning/python
+pip install .
+```
+Create an IPython kernel for the drlnd environment.
+
+```
+python -m ipykernel install --user --name drlnd --display-name "drlnd"
+```
+
 ### Instructions
 
-Follow the instructions in `Tennis.ipynb` to get started with training your own agent!  
+Follow the instructions in `Tennis.ipynb` to get started with training your own agent!
+There are a few outputs that can be expected from this code, when it is running. First, the code will output some information about the environment, in the cell where the environment and the agent are instantiated. It should look something like this:
+
+INFO:unityagents:
+'Academy' started successfully!
+Unity Academy name: Academy
+        Number of Brains: 1
+        Number of External Brains : 1
+        Lesson number : 0
+        Reset Parameters :
+		goal_speed -> 1.0
+		goal_size -> 5.0
+Unity brain name: ReacherBrain
+        Number of Visual Observations (per agent): 0
+        Vector Observation space type: continuous
+        Vector Observation space size (per agent): 33
+        Number of stacked Vector Observation: 1
+        Vector Action space type: continuous
+        Vector Action space size (per agent): 4
+        Vector Action descriptions: , , ,
+
+The next output will be the taining progress. It will output episode scores in the following format:
+
+Episode ###        Average Score: ###
+
+where the average score is over all the agents for that episode. Every 100 episodes, the code will display the average score of the last 100 episodes.
+
+Episode 100        Average Score: ###
+
+If the exit criteria are met, the code will display that the environment has been solved, and state the number of episodes. Once training is complete, the scores for each episode will be plotted. The testing segment produces the same output type as the training. One difference here is that the plot will have an extra line for the average score over the testing episodes.
 
 ### (Optional) Challenge: Soccer Environment
 
